@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from datetime import datetime
 from app.services.vllm.vllm_service import vllm_service
+import torch
 
 router = APIRouter()
 
@@ -12,7 +13,7 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "service": "Krishi Saarthi - Agricultural AI Services",
+        "service": "Krishi Saarthi - Agri Core ML",
         "version": "1.0.0"
     }
 
@@ -23,16 +24,22 @@ async def detailed_health_check():
     """
     vllm_status = vllm_service.get_status()
     
+    # Get CUDA information
+    cuda_info = {
+        "available": torch.cuda.is_available()
+    }
+    
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "service": "Krishi Saarthi - Agricultural AI Services",
+        "service": "Krishi Saarthi - Agri Core ML",
         "version": "1.0.0",
         "services": {
             "vllm": "loaded" if vllm_status["loaded"] else "not_loaded",
             "kcc": "not_implemented"
         },
         "uptime": "running",
+        "cuda": cuda_info,
         "details": {
             "vllm": vllm_status
         }
