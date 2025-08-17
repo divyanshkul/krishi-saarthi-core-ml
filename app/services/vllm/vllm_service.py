@@ -23,7 +23,9 @@ class VLLMService:
         self.model = None
         self.processor = None
         self.is_loaded = False
-        self.adapter_path = "/teamspace/studios/this_studio/app/ml-models/VLLM/model_weights"
+        # Use relative path from current file location
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.adapter_path = os.path.join(current_dir, '..', '..', 'ml-models', 'VLLM', 'model_weights')
         self.base_model_id = "HuggingFaceTB/SmolVLM-Base"
     
     def patch_idefics3_vision_embeddings(self):
