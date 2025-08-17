@@ -6,6 +6,7 @@ Agricultural image response generation using fine-tuned SmolVLM
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from PIL import Image
 import io
+import time
 from app.services.vllm.vllm_service import vllm_service
 from pydantic import BaseModel
 from typing import Optional
@@ -39,6 +40,10 @@ async def generate_agricultural_response(
     - Ask a question about the image
     - Get AI-powered agricultural response
     """
+    request_start = time.time()
+    
+    logger.info(f"Processing request - Image: {image.filename}, Question: {question}")
+    
     try:
         # Validate file type
         if not image.content_type.startswith('image/'):
@@ -48,10 +53,11 @@ async def generate_agricultural_response(
         image_data = await image.read()
         pil_image = Image.open(io.BytesIO(image_data))
         
-        logger.info(f"Processing image: {image.filename}, Question: {question}")
-        
         # Generate response using VLLM service
         response = await vllm_service.generate_response(pil_image, question)
+        
+        total_time = time.time() - request_start
+        logger.info(f"Request completed in {total_time:.3f}s")
         
         return GenerationResponse(
             success=True,
@@ -59,8 +65,13 @@ async def generate_agricultural_response(
             question=question
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        logger.error(f"Error in response generation: {e}")
+        total_time = time.time() - request_start
+        logger.error(f"Request failed after {total_time:.3f}s: {e}")
+        
         return GenerationResponse(
             success=False,
             response="",

@@ -76,27 +76,31 @@ class VLLMService:
             return embeddings
         
         Idefics3VisionEmbeddings.forward = fixed_forward
-        logger.info("✅ Idefics3VisionEmbeddings patched successfully!")
+        logger.info("Idefics3VisionEmbeddings patched successfully")
     
     async def load_model(self):
         """
         Load the fine-tuned SmolVLM model
         """
         if self.is_loaded:
+            logger.info("VLLM model already loaded, skipping initialization")
             return
         
         try:
-            logger.info("Loading VLLM service for Krishi Saarthi...")
+            import time
+            total_start = time.time()
+            
+            logger.info("Loading VLLM service...")
+            logger.info(f"Base model: {self.base_model_id}")
             
             # Apply the vision embeddings patch
+            logger.info("Applying vision embeddings patch...")
             self.patch_idefics3_vision_embeddings()
-            
-            # Load processor
-            logger.info(f"Loading processor from {self.base_model_id}...")
-            self.processor = AutoProcessor.from_pretrained(self.base_model_id)
             
             # Validate adapter path
             adapter_path = os.path.abspath(self.adapter_path)
+            logger.info(f"Adapter path: {adapter_path}")
+            
             if not os.path.exists(adapter_path):
                 raise FileNotFoundError(f"Adapter directory not found: {adapter_path}")
             
@@ -104,7 +108,11 @@ class VLLMService:
             if not os.path.exists(config_file):
                 raise FileNotFoundError(f"adapter_config.json not found at: {config_file}")
             
-            # Load model with quantization
+            # Load processor
+            logger.info(f"Loading processor...")
+            self.processor = AutoProcessor.from_pretrained(self.base_model_id)
+            
+            # Configure quantization
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_use_double_quant=True,
@@ -113,21 +121,31 @@ class VLLMService:
             )
             
             # Load base model
+            logger.info("Loading base model (this may take a few minutes)...")
             base_model = Idefics3ForConditionalGeneration.from_pretrained(
                 self.base_model_id,
                 quantization_config=bnb_config,
                 device_map="auto"
             )
             
+            # Check device information
+            if torch.cuda.is_available():
+                logger.info(f"Using CUDA device: {torch.cuda.get_device_name(0)}")
+            else:
+                logger.info("Using CPU")
+            
             # Load PEFT model (LoRA adapters)
+            logger.info("Loading LoRA adapters...")
             self.model = PeftModel.from_pretrained(base_model, adapter_path, local_files_only=True)
             self.model.eval()
             
             self.is_loaded = True
-            logger.info("✅ VLLM service loaded successfully!")
+            total_time = time.time() - total_start
+            
+            logger.info(f"VLLM service loaded successfully in {total_time:.2f}s")
             
         except Exception as e:
-            logger.error(f"❌ Failed to load VLLM service: {e}")
+            logger.error(f"Failed to load VLLM service: {e}")
             raise
     
     async def generate_response(self, image: Image.Image, question: str) -> str:
@@ -142,9 +160,13 @@ class VLLMService:
             str: AI-generated response
         """
         if not self.is_loaded:
+            logger.warning("Model not loaded, initializing now...")
             await self.load_model()
         
         try:
+            import time
+            inference_start = time.time()
+            
             # Ensure image is RGB
             if image.mode != 'RGB':
                 image = image.convert('RGB')
@@ -190,12 +212,14 @@ class VLLMService:
             )[0]
             
             response = generated_text.strip()
-            logger.info(f"Generated response: {response}")
+            total_time = time.time() - inference_start
+            
+            logger.info(f"Inference completed in {total_time:.3f}s")
             
             return response
             
         except Exception as e:
-            logger.error(f"❌ Error during image analysis: {e}")
+            logger.error(f"Error during image analysis: {e}")
             raise
     
     def get_status(self) -> dict:
