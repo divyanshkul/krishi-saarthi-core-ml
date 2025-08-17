@@ -1,0 +1,14 @@
+SMOL-vlm-final/
+*.zip
+*.tar.gz
+
+# Python related
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+.DS_Store
