@@ -1,7 +1,8 @@
 SMOL-vlm-final/
 *.zip
 *.tar.gz
-
+.env
+krishi-saarthi-main-163bc6406584.json
 kcc_varities/
 # Python related
 __pycache__/
