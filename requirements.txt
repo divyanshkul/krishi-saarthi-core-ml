@@ -1,7 +1,7 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
-pydantic==2.5.0
+pydantic>=1.10.0,<2.0.0
 torch>=2.0.0
 transformers>=4.35.0
 peft>=0.6.0
@@ -9,9 +9,9 @@ pillow>=10.0.0
 bitsandbytes>=0.41.0
 accelerate>=0.23.0
 
-# KCC Service Dependencies
-langchain-core>=0.1.0
-langchain-google-genai>=1.0.0
-langchain-google-vertexai>=1.0.0
+# KCC Service Dependencies (older compatible versions)
+langchain-core==0.1.45
+langchain-google-genai==0.0.11
+langchain-google-vertexai==0.0.7
 python-dotenv>=1.0.0
 google-cloud-aiplatform>=1.42.0

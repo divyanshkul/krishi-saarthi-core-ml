@@ -165,6 +165,7 @@ class KCCService:
             max_tokens=None,
             timeout=None,
             max_retries=2,
+            convert_system_message_to_human=True
         )
         
         logger.info("Gemini models ready")
