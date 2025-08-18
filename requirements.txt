@@ -8,3 +8,10 @@ peft>=0.6.0
 pillow>=10.0.0
 bitsandbytes>=0.41.0
 accelerate>=0.23.0
+
+# KCC Service Dependencies
+langchain-core>=0.1.0
+langchain-google-genai>=1.0.0
+langchain-google-vertexai>=1.0.0
+python-dotenv>=1.0.0
+google-cloud-aiplatform>=1.42.0

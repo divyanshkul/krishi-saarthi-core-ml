@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from datetime import datetime
 from app.services.vllm.vllm_service import vllm_service
+from app.services.kcc.kcc_service import kcc_service
 import torch
 
 router = APIRouter()
@@ -23,6 +24,7 @@ async def detailed_health_check():
     Detailed health check with more information
     """
     vllm_status = vllm_service.get_status()
+    kcc_status = kcc_service.get_status()
     
     # Get CUDA information
     cuda_info = {
@@ -36,11 +38,12 @@ async def detailed_health_check():
         "version": "1.0.0",
         "services": {
             "vllm": "loaded" if vllm_status["loaded"] else "not_loaded",
-            "kcc": "not_implemented"
+            "kcc": "loaded" if kcc_status["loaded"] else "not_loaded"
         },
         "uptime": "running",
         "cuda": cuda_info,
         "details": {
-            "vllm": vllm_status
+            "vllm": vllm_status,
+            "kcc": kcc_status
         }
     }

@@ -2,6 +2,7 @@ SMOL-vlm-final/
 *.zip
 *.tar.gz
 
+kcc_varities/
 # Python related
 __pycache__/
 *.py[cod]

@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.api.health import router as health_router
 from app.api.vllm import router as vllm_router
+from app.api.kcc import router as kcc_router
 from app.services.vllm.vllm_service import vllm_service
+from app.services.kcc.kcc_service import kcc_service
 
 # Configure logging
 def setup_logging():
@@ -39,15 +41,24 @@ async def lifespan(app: FastAPI):
     
     try:
         logger.info("Initializing VLLM model...")
-        model_start = time.time()
+        vllm_start = time.time()
         
         await vllm_service.load_model()
         
-        model_time = time.time() - model_start
-        logger.info(f"VLLM model initialized successfully in {model_time:.2f}s")
+        vllm_time = time.time() - vllm_start
+        logger.info(f"VLLM model initialized successfully in {vllm_time:.2f}s")
+        
+        logger.info("Initializing KCC model...")
+        kcc_start = time.time()
+        
+        # KCC will automatically load credentials from .env and service account JSON
+        await kcc_service.load_model()
+        
+        kcc_time = time.time() - kcc_start
+        logger.info(f"KCC model initialized successfully in {kcc_time:.2f}s")
         
     except Exception as e:
-        logger.error(f"Failed to initialize VLLM model: {e}")
+        logger.error(f"Failed to initialize models: {e}")
         raise
     
     startup_time = time.time() - startup_start
@@ -72,6 +83,7 @@ app = FastAPI(
 # Include routers
 app.include_router(health_router, prefix="/api", tags=["health"])
 app.include_router(vllm_router, prefix="/api/vllm", tags=["vllm"])
+app.include_router(kcc_router, prefix="/api/kcc", tags=["kcc"])
 
 if __name__ == "__main__":
     import uvicorn
