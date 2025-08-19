@@ -45,15 +45,12 @@ async def generate_agricultural_response(
     logger.info(f"Processing request - Image: {image.filename}, Question: {question}")
     
     try:
-        # Validate file type
         if not image.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
         
-        # Read and process image
         image_data = await image.read()
         pil_image = Image.open(io.BytesIO(image_data))
         
-        # Generate response using VLLM service
         response = await vllm_service.generate_response(pil_image, question)
         
         total_time = time.time() - request_start
@@ -66,7 +63,6 @@ async def generate_agricultural_response(
         )
         
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
         total_time = time.time() - request_start

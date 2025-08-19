@@ -20,7 +20,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel, PeftConfig
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("")
 
 class KCCService:
     """
@@ -32,9 +32,8 @@ class KCCService:
         self.model = None
         self.tokenizer = None
         self.is_loaded = False
-        # Use relative path from current file location
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.model_path = os.path.join(current_dir, '..', '..', 'ml-models', 'KCC', 'weights')
+        self.model_path = os.path.join(current_dir, '..', '..', 'ml-models', 'KCC', 'varieties_weights')
         self.base_model_id = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
         
         # Will be set during initialization
@@ -60,7 +59,6 @@ class KCCService:
             logger.info("Loading KCC service...")
             logger.info(f"Base model: {self.base_model_id}")
             
-            # Set up API keys - try parameter first, then environment
             api_key = google_api_key or os.getenv("GEMINI_API_KEY")
             if api_key:
                 os.environ["GOOGLE_API_KEY"] = api_key
@@ -68,7 +66,6 @@ class KCCService:
             else:
                 logger.warning("No Google API key found - will use fallback mode")
             
-            # Set up Google Cloud credentials for Vertex AI
             service_account_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'krishi-saarthi-main-163bc6406584.json')
             if os.path.exists(service_account_path):
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = service_account_path
@@ -76,7 +73,6 @@ class KCCService:
             else:
                 logger.warning("Service account file not found - Vertex AI will not be available")
             
-            # Initialize models
             await self._setup_tinyllama()
             self._setup_gemini_models(project_id, location)
             self._setup_prompts()
@@ -95,7 +91,6 @@ class KCCService:
         logger.info("Loading TinyLlama model...")
         
         try:
-            # Validate model path
             model_path = os.path.abspath(self.model_path)
             logger.info(f"Model path: {model_path}")
             
@@ -106,10 +101,8 @@ class KCCService:
             if not os.path.exists(config_file):
                 raise FileNotFoundError(f"adapter_config.json not found at: {config_file}")
             
-            # Load PEFT config
             peft_config = PeftConfig.from_pretrained(model_path)
             
-            # Load base model
             base_model = AutoModelForCausalLM.from_pretrained(
                 peft_config.base_model_name_or_path,
                 torch_dtype=torch.float32,
@@ -117,10 +110,8 @@ class KCCService:
                 device_map="auto" if torch.cuda.is_available() else None
             )
             
-            # Load PEFT model
             self.model = PeftModel.from_pretrained(base_model, model_path)
             
-            # Load tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained(peft_config.base_model_name_or_path)
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -128,7 +119,6 @@ class KCCService:
             self.model.eval()
             logger.info("TinyLlama loaded successfully")
             
-            # Check device information
             if torch.cuda.is_available():
                 logger.info(f"Using CUDA device: {torch.cuda.get_device_name(0)}")
             else:
@@ -158,7 +148,6 @@ class KCCService:
             logger.warning(f"Vertex AI failed ({e}), using regular Gemini...")
             self.search_llm = None
         
-        # Regular Gemini (for processing and fallback)
         self.processing_llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             temperature=0,
@@ -249,7 +238,6 @@ Be helpful and direct farmers to reliable sources."""),
 Provide helpful guidance about soybean varieties and where to find reliable information.""")
         ])
         
-        # Create chains
         self.extraction_chain = self.extraction_prompt | self.processing_llm
         self.synthesis_chain = self.synthesis_prompt | self.processing_llm
         self.fallback_chain = self.fallback_prompt | self.processing_llm
@@ -266,15 +254,12 @@ Provide helpful guidance about soybean varieties and where to find reliable info
         # Tokenize with attention mask
         inputs = self.tokenizer(prompt, return_tensors="pt")
         
-        # Create attention mask if not present
         if 'attention_mask' not in inputs:
             inputs['attention_mask'] = torch.ones_like(inputs['input_ids'])
         
-        # Move to model device
         model_device = next(self.model.parameters()).device
         inputs = {k: v.to(model_device) for k, v in inputs.items()}
         
-        # Generate
         with torch.no_grad():
             outputs = self.model.generate(
                 input_ids=inputs['input_ids'],
@@ -287,7 +272,6 @@ Provide helpful guidance about soybean varieties and where to find reliable info
                 eos_token_id=self.tokenizer.eos_token_id
             )
         
-        # Decode only new tokens
         input_length = inputs['input_ids'].shape[1]
         new_tokens = outputs[0][input_length:]
         response = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
@@ -302,7 +286,6 @@ Provide helpful guidance about soybean varieties and where to find reliable info
             result = self.extraction_chain.invoke({"tinyllama_output": tinyllama_output})
             extraction_text = result.content
             
-            # Parse the structured response
             varieties = []
             maturity = ""
             yield_info = ""
@@ -355,22 +338,19 @@ Provide helpful guidance about soybean varieties and where to find reliable info
             matches = re.findall(pattern, text, re.IGNORECASE)
             varieties.extend(matches)
         
-        # Clean and deduplicate
         varieties = list(set([v.strip() for v in varieties if v.strip()]))
         return varieties[:3]  # Limit to 3 varieties
     
     def perform_search_simple(self, search_query: str) -> str:
         """Perform simple search"""
-        logger.info(f"====== Stage 3: Gemini Search ======")
+        logger.info(f"====== Stage 3: Google Search (Via Gemini Vertex AI) ======")
         logger.info(f"Searching for: {search_query}")
         
         try:
             if self.search_llm:
-                # Try Vertex AI with search
                 result = self.search_llm.invoke(f"Search for reliable agricultural information about: {search_query}")
                 return result.content
             else:
-                # Use regular Gemini as fallback
                 search_chain = self.search_prompt | self.processing_llm
                 result = search_chain.invoke({"search_query": search_query})
                 return result.content
@@ -430,28 +410,23 @@ Your query was: {original_query}"""
             logger.info("====== KCC Processing Pipeline ======")
             logger.info(f"Processing query: {query}")
             
-            # Stage 1: TinyLlama response
             tinyllama_output = self.get_tinyllama_response(query)
             logger.info(f"====== TinyLlama Output ======")
-            logger.info(f"Response: {tinyllama_output[:100]}...")
+            logger.info(f"Response: {tinyllama_output}")
             
-            # Stage 2: Extract claims (simple method)
             extracted_claims = self.extract_claims_simple(tinyllama_output)
             logger.info(f"====== Extraction Output ======")
             logger.info(f"Varieties found: {extracted_claims.get('varieties', [])}")
             
-            # Stage 3: Search for varieties
             search_results = ""
             if extracted_claims.get("has_varieties", False):
                 for variety in extracted_claims["varieties"][:2]:  # Limit searches
                     variety_search = self.perform_search_simple(f"{variety} soybean variety yield maturity")
                     search_results += f"\n--- {variety} ---\n{variety_search}\n"
             else:
-                # Search based on general query
                 general_search = self.perform_search_simple(f"soybean varieties {query}")
                 search_results = general_search
             
-            # Stage 4: Synthesize response
             if search_results.strip():
                 final_response = self.synthesize_response_simple(query, tinyllama_output, search_results)
             else:
@@ -481,4 +456,4 @@ Your query was: {original_query}"""
         }
 
 # Global service instance
-kcc_service = KCCService()
+kcc_varieties_service = KCCService()

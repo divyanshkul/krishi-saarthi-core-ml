@@ -5,7 +5,7 @@ Agricultural Q&A using fine-tuned TinyLlama
 
 from fastapi import APIRouter, Form, HTTPException
 import time
-from app.services.kcc.kcc_service import kcc_service
+from app.services.kcc.kcc_varieties_service import kcc_varieties_service
 from pydantic import BaseModel
 from typing import Optional
 import logging
@@ -41,8 +41,7 @@ async def process_agricultural_query(
     logger.info(f"Processing KCC query: {query}")
     
     try:
-        # Generate response using KCC service
-        response = await kcc_service.generate_response(query)
+        response = await kcc_varieties_service.generate_response(query)
         
         total_time = time.time() - request_start
         logger.info(f"KCC request completed in {total_time:.3f}s")
@@ -69,7 +68,7 @@ async def get_kcc_status():
     """
     Get KCC service status
     """
-    status = kcc_service.get_status()
+    status = kcc_varieties_service.get_status()
     return ServiceStatus(
         service="KCC",
         status="loaded" if status["loaded"] else "not_loaded",
@@ -82,7 +81,7 @@ async def load_kcc_model():
     Manually load the KCC model
     """
     try:
-        await kcc_service.load_model()
+        await kcc_varieties_service.load_model()
         return {"success": True, "message": "KCC model loaded successfully"}
     except Exception as e:
         logger.error(f"Failed to load KCC model: {e}")

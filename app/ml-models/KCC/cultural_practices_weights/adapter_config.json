@@ -1,0 +1,18 @@
+{
+  "auto_mapping": null,
+  "base_model_name_or_path": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+  "inference_mode": true,
+  "modules_to_save": null,
+  "num_attention_heads": 32,
+  "num_layers": 22,
+  "num_transformer_submodules": 1,
+  "num_virtual_tokens": 50,
+  "peft_type": "PROMPT_TUNING",
+  "prompt_tuning_init": "TEXT",
+  "prompt_tuning_init_text": "You are a helpful agricultural assistant providing weather information and farming advice to farmers. Respond with accurate, practical information.",
+  "revision": null,
+  "task_type": "CAUSAL_LM",
+  "token_dim": 2048,
+  "tokenizer_kwargs": null,
+  "tokenizer_name_or_path": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+}

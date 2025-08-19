@@ -4,6 +4,7 @@ SMOL-vlm-final/
 .env
 krishi-saarthi-main-163bc6406584.json
 kcc_varities/
+teamspace/
 # Python related
 __pycache__/
 *.py[cod]
